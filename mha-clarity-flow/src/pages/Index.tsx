@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useChat, Message } from "@/context/ChatContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Paperclip, RotateCcw, Mic, FileText, User, Bot } from "lucide-react";
+import { Send, Paperclip, RotateCcw, Mic, FileText, User, Bot, Save, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import SavedChatsPanel from "@/components/SavedChatsPanel";
 
 // Message type is now imported from ChatContext
 
@@ -32,24 +33,38 @@ const TypingIndicator = () => (
 );
 
 const Index = () => {
-  const { messages, setMessages } = useChat();
+  const { messages, setMessages, saveCurrentChat, currentChatId } = useChat();
   const [inputValue, setInputValue] = useState("");
+  const [savedChatsPanelOpen, setSavedChatsPanelOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [showWelcome, setShowWelcome] = useState(messages.length === 0);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const welcomeMessage: Message = {
-    id: "welcome",
-    type: "assistant",
-    content: "👋 Hello! I'm MHA Assistant, your friendly government helpdesk chatbot. Type your question below!",
-    timestamp: new Date(),
-  };
+const welcomeMessage: Message = {
+  id: "welcome",
+  type: "assistant",
+  content: `👋 Hello! I'm MHA Assistant, your friendly government helpdesk chatbot. Type your question below!
+
+Here are some example questions you can ask me:
+
+- How do I report a cybercrime in India?
+- Any women policies mentioned in the documents?
+- Any awards distribution mentioned?
+- What is the role of the Intelligence Bureau under MHA?
+- Which department handles disaster management in India?`,
+  timestamp: new Date(),
+};
 
   useEffect(() => {
     // Auto-focus input
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    // Update welcome message visibility when messages change
+    setShowWelcome(messages.length === 0);
+  }, [messages]);
 
   useEffect(() => {
     // Scroll to bottom when new messages arrive
@@ -147,6 +162,12 @@ const Index = () => {
     }, 1500);
   };
 
+  const handleQuickSave = () => {
+    if (messages.length > 0) {
+      saveCurrentChat();
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)] relative overflow-hidden">
       {/* Gradient Blur Background with Floating Icons */}
@@ -166,15 +187,42 @@ const Index = () => {
           {/* Add more icons as desired */}
         </div>
       </div>
+
       <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full">
         {/* Chat Header */}
         <motion.div
           className="glass border-b border-border/50 p-6"
           whileHover={{ scale: 1.01, boxShadow: "0 4px 32px rgba(0,0,0,0.08)" }}
           transition={{ type: "spring", stiffness: 300 }}>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold gradient-text mb-2">MHA Assistant</h1>
-            <p className="text-muted-foreground">Government Helpdesk Chatbot</p>
+          <div className="flex items-center justify-between">
+            <div className="text-center flex-1">
+              <h1 className="text-2xl font-bold gradient-text mb-2">MHA Assistant</h1>
+              <p className="text-muted-foreground">Government Helpdesk Chatbot</p>
+            </div>
+
+            {/* Save and Chat Management Buttons */}
+            <div className="flex items-center gap-2 ml-4">
+              {messages.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleQuickSave}
+                  className="flex items-center gap-2 hover:bg-green-50 hover:text-green-700 hover:border-green-200 transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  {currentChatId ? 'Update' : 'Save'}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSavedChatsPanelOpen(true)}
+                className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors"
+              >
+                <FolderOpen className="w-4 h-4" />
+                Saved Chats
+              </Button>
+            </div>
           </div>
         </motion.div>
 
@@ -182,28 +230,33 @@ const Index = () => {
         <ScrollArea ref={scrollAreaRef} className="flex-1 px-6">
           <div className="py-6 space-y-6">
             {/* Welcome Message */}
-            <AnimatePresence>
-              {showWelcome && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
-                      <Bot className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <Card className="chat-bubble-assistant max-w-2xl">
-                        <CardContent className="p-4">
-                          <p className="text-sm">{welcomeMessage.content}</p>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+           <AnimatePresence>
+  {showWelcome && (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+    >
+      <div className="flex items-start gap-4">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
+          <Bot className="w-4 h-4 text-primary" />
+        </div>
+        <div className="flex-1">
+          <Card className="chat-bubble-assistant max-w-2xl">
+            <CardContent className="p-4">
+              {welcomeMessage.content.split("\n").map((line, idx) => (
+                <p key={idx} className="text-sm mb-2">
+                  {line}
+                </p>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
 
             {/* Chat Messages */}
             <AnimatePresence>
@@ -350,6 +403,12 @@ const Index = () => {
           </p>
         </div>
       </div>
+
+      {/* Saved Chats Panel */}
+      <SavedChatsPanel 
+        isOpen={savedChatsPanelOpen}
+        onClose={() => setSavedChatsPanelOpen(false)}
+      />
     </div>
   );
 };
